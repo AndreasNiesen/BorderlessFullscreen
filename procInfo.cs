@@ -12,8 +12,8 @@ namespace borderlessCSharp
 
 		public procInfo()
 		{
-			infoDict.Add("PId", "");
 			infoDict.Add("Process", "");
+			infoDict.Add("PId", "");
 			infoDict.Add("WndName", "");
 			infoDict.Add("X", "");
 			infoDict.Add("Y", "");
