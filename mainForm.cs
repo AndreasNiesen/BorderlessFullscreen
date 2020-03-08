@@ -15,8 +15,8 @@ namespace borderlessCSharp
     {
 		public List<string> blacklistedProcesses = new List<string>();
 		private List<string> currentProcesses = new List<string>();
-		private List<string> wannaSleep = new List<string>();
-		private Dictionary<string, string> procWndInfos = new Dictionary<string, string>();
+		private List<string> printableInfo = new List<string>();
+		private procInfo processInfo = new procInfo();
 		
 		//--------------------------------------------------------------------------------------------------
 		//__declspec(dllimport) bool bNextProcEntry(int* pLastPid, wchar_t* pNext, int iNextMaxLen);
@@ -42,13 +42,6 @@ namespace borderlessCSharp
 				blacklistedProcesses = new List<string>(buffer);
 			}
 			updateProcessesList();
-			procWndInfos.Add("Process", "");
-			procWndInfos.Add("PId", "");
-			procWndInfos.Add("WndName", "");
-			procWndInfos.Add("X", "");
-			procWndInfos.Add("Y", "");
-			procWndInfos.Add("Height", "");
-			procWndInfos.Add("Width", "");
 		}
 
 		public void updateProcessesList()
@@ -117,53 +110,36 @@ namespace borderlessCSharp
 				buffer += 2;
 				pidSubStr = pidSubStr.Substring(buffer);
 				int iPid = int.Parse(pidSubStr);
-				int maxLen = 1000;
+				int maxLen = 200;
 				char[] retVal = new char[maxLen];
 				IntPtr pRetVal = Marshal.UnsafeAddrOfPinnedArrayElement(retVal, 0);
 
-				buffer = iProcWinInfos(iPid, pRetVal, maxLen);
+				buffer = iProcWinInfos(iPid, pRetVal, maxLen);	// example pRetVal: "WndName|10|20|100|120" - Errors are "!No Window Handle Found!", "Could not get Rect infos."
 				string infos = new string(retVal).Split('\0')[0];
-
-				wannaSleep.Clear();
-
-				if (buffer < 0)
+				if (String.IsNullOrEmpty(infos))
 				{
-					wannaSleep.Add(infos);
+					throw new System.Exception("iProcWinInfos needs a char array with a length of atleast 50!");
 				}
-				else if (buffer == 0)
+
+				printableInfo.Clear();
+
+				processInfo.setFromString(procName, pidSubStr, infos);
+				if (processInfo.isError())
 				{
-					if (infos != "!No Window Handle Found!")
+					printableInfo.Add(processInfo.getCurrentError());
+				}
+				else
+				{
+					printableInfo = processInfo.getInfo();
+					if (processInfo.isError())
 					{
-						wannaSleep.Add("Information incomplete.");
-						wannaSleep.Add("Please increase the length of your buffer.");
-					}
-					else
-					{
-						wannaSleep.Add(infos);
-						wannaSleep.Add("");
-						wannaSleep.Add("Recommendation:");
-						wannaSleep.Add("    Add Process to NoShow List");
+						printableInfo.Add("\nInfos Missing.");
 					}
 				}
-				else if (buffer > 0)
-				{
-					string[] splitInfos = infos.Split('|');
-					procWndInfos["Process"] = procName;
-					procWndInfos["PId"] = pidSubStr;
-					procWndInfos["WndName"] = splitInfos[0];
-					procWndInfos["X"] = splitInfos[1];
-					procWndInfos["Y"] = splitInfos[2];
-					procWndInfos["Height"] = splitInfos[3];
-					procWndInfos["Width"] = splitInfos[4];
 
-					foreach (string key in procWndInfos.Keys)
-					{
-						wannaSleep.Add($"{key}: {procWndInfos[key]}");
-					}
-				}
 
 				processInfoListBox.DataSource = new List<string>();
-				processInfoListBox.DataSource = wannaSleep;
+				processInfoListBox.DataSource = printableInfo;
 			}
 		}
 
@@ -172,7 +148,12 @@ namespace borderlessCSharp
 			if (allProcessesListBox.SelectedItem != null)
 			{
 				Rectangle myRect = Screen.FromControl(this).Bounds;
-				IntPtr pWinName = Marshal.StringToHGlobalUni(procWndInfos["WndName"]);
+				string winName = processInfo.getValue("WndName");
+				if(String.IsNullOrEmpty(winName))
+				{
+					throw new System.Exception("Key-Value is empty or non-existent!"); // TODO - alternative to throw exception.. (some less disruptive error-handling)
+				}
+				IntPtr pWinName = Marshal.StringToHGlobalUni(winName);
 				bRemoveBorder(pWinName, myRect.Width, myRect.Height);
 				Marshal.FreeHGlobal(pWinName);
 			}
