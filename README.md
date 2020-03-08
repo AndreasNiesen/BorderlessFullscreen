@@ -9,3 +9,6 @@ So don't expect anything fancy.<br>
 Dll for the C++ Functions.<br>
 Otherwise primarily auto-generated C# sharp stuff.<br>
 Processes added to NoShow List are saved in a text-file.<br>
+<br>
+Executables are in the Executables-Repository:<br>
+https://github.com/Yonkiepoodle/Executables/tree/master/BorderlessFullscreen
